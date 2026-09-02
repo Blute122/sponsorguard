@@ -1,0 +1,11 @@
+[
+  { "name": "NordVPN",    "domains": ["nordvpn.com"],        "aliases": ["nordvpn", "nord vpn"] },
+  { "name": "Audible",    "domains": ["audible.com"],        "aliases": ["audible"] },
+  { "name": "Honey",      "domains": ["joinhoney.com"],      "aliases": ["honey", "paypal honey"] },
+  { "name": "Skillshare", "domains": ["skillshare.com"],     "aliases": ["skillshare"] },
+  { "name": "HelloFresh", "domains": ["hellofresh.com"],     "aliases": ["hellofresh", "hello fresh"] },
+  { "name": "Raid Shadow Legends", "domains": ["plarium.com"], "aliases": ["raid shadow legends", "plarium"] },
+  { "name": "Squarespace","domains": ["squarespace.com"],    "aliases": ["squarespace"] },
+  { "name": "Surfshark",  "domains": ["surfshark.com"],      "aliases": ["surfshark"] },
+  { "name": "ExpressVPN", "domains": ["expressvpn.com"],     "aliases": ["expressvpn", "express vpn"] }
+]

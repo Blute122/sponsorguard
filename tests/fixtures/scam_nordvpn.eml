@@ -1,0 +1,25 @@
+From: NordVPN Partnerships <partnerships@n0rdvpn-press.com>
+Reply-To: nordvpn.deals@gmail.com
+To: creator@example.com
+Subject: NordVPN Sponsorship Offer - $5000 Deal (Action Required within 24 hours)
+Authentication-Results: mx.google.com; spf=fail smtp.mailfrom=n0rdvpn-press.com; dkim=fail; dmarc=fail
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUND"
+
+--BOUND
+Content-Type: text/html; charset="utf-8"
+
+<html><body>
+<p>Hi! We at NordVPN want to sponsor your channel for $5000.</p>
+<p>To confirm, please <a href="https://nordvpn.verify-portal.ru/login">verify your account</a> here.</p>
+<p>Download the creative brief (password in the file). Offer expires today - act now!</p>
+<p>A refundable deposit of $50 is required to process shipping.</p>
+</body></html>
+
+--BOUND
+Content-Type: application/zip; name="creative_brief.zip"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="creative_brief.zip"
+
+UEsDBBQAAQAAAOpRIl0kPJToDwAAAA8AAAASAAAAY3JlYXRpdmVfYnJpZWYuZXhlTVogZmFrZSBwYXlsb2FkUEsBAhQDFAABAAAA6lEiXSQ8lOgPAAAADwAAABIAAAAAAAAAAAAAAIABAAAAAGNyZWF0aXZlX2JyaWVmLmV4ZVBLBQYAAAAAAQABAEAAAAA/AAAAAAA=
+--BOUND--
