@@ -66,6 +66,7 @@ loop over the registry.
 pip install -r requirements.txt        # only needed for the tests; core is stdlib
 python -m sponsorguard.cli path/to/email.eml
 python -m sponsorguard.cli path/to/email.eml --json
+python -m sponsorguard.cli path/to/email.eml --enrich   # opt in to the RDAP domain-age lookup
 pytest -q
 ```
 
@@ -76,6 +77,34 @@ from sponsorguard import analyze
 report = analyze(open("email.eml", "rb").read())
 print(report.verdict, report.score)
 ```
+
+### Domain-age enrichment (opt-in, network-dependent)
+
+By default `analyze()` is **pure and offline** — every rule is a function over
+the parsed email, no network. One optional signal ages the sender's registrable
+domain via [RDAP](https://about.rdap.org/) (a fresh lookalike domain registered
+days before a blast is a strong scam tell):
+
+| Sender domain age | Points | Severity |
+|-------------------|--------|----------|
+| < 30 days         | 25     | high     |
+| 30–90 days        | 12     | medium   |
+| older, or unknown | —      | *no finding* |
+
+Because it makes a network call it is **off by default**. Enable it explicitly:
+
+```python
+report = analyze(raw_email, enrich=True)   # or:  cli … --enrich
+```
+
+It **fails safe to neutral**: any timeout, network error, non-200, or missing
+data returns no finding, so a domain whose age can't be determined scores
+*exactly* as it would with enrichment off. The lookup is isolated in
+[`sponsorguard/enrichment/rdap.py`](sponsorguard/enrichment/rdap.py) and never
+raises — the core detection never depends on network availability. Note the
+honest caveat below: some TLDs omit the registration date in RDAP, which
+correctly yields **no finding** rather than a false signal. Caching and
+rate-limiting are intentionally out of scope for now (future work).
 
 ## Run the web app
 
@@ -128,6 +157,10 @@ pytest -q
   omitted.)
 - **`registrable_domain` is an approximation**, not the full Public Suffix List.
   Swap in `tldextract` before relying on it for arbitrary ccTLDs.
+- **Domain-age enrichment (opt-in) is network-dependent and best-effort.** Some
+  TLDs don't publish a `registration` event in RDAP; that yields **no finding**
+  (neutral), never a false signal, and the same is true of any timeout or error.
+  It never lowers a score and never runs unless you pass `enrich=True`.
 - **RAR/7z contents aren't inspected** (no stdlib support) — flagged as
   uninspected archives at a lower weight rather than silently passed.
 - **The brand list (`data/brands.json`) goes stale.** It's versioned JSON on
@@ -142,7 +175,11 @@ pytest -q
   above); no Gmail OAuth required, which sidesteps Google's restricted-scope
   security review.
 - Live SPF evaluation from the originating IP.
-- Domain-age enrichment via RDAP (async, timeout-guarded, degrades to neutral).
+- ~~Domain-age enrichment via RDAP~~ — **built** (see *Domain-age enrichment*
+  above); shipped as a sync, opt-in enrichment pass (`analyze(…, enrich=True)`)
+  rather than async — one best-effort lookup didn't justify an event loop or a
+  new async HTTP dependency. Timeout-guarded, degrades to neutral. Caching /
+  rate-limiting still open.
 - Optional Gmail add-on (note: reading inboxes needs a restricted-scope OAuth
   app + annual CASA assessment — worth it only past the portfolio stage).
 

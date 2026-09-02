@@ -68,9 +68,23 @@ def score_findings(findings: list[Finding]) -> Report:
     )
 
 
-def analyze(raw_email: str | bytes) -> Report:
-    """Convenience end-to-end: raw .eml -> Report."""
+def analyze(raw_email: str | bytes, *, enrich: bool = False) -> Report:
+    """Convenience end-to-end: raw .eml -> Report.
+
+    Pure and offline by default. Pass ``enrich=True`` to also run the
+    network-dependent enrichment pass (currently an RDAP sender-domain-age
+    lookup). That pass fails safe to *no finding*, so a network problem — or a
+    TLD that hides its registration date — leaves the score exactly as it would
+    be with ``enrich=False``. With ``enrich=False`` this is byte-for-byte the
+    original pure pipeline.
+    """
     from .parser import parse_email
     from .rules import run_rules
 
-    return score_findings(run_rules(parse_email(raw_email)))
+    parsed = parse_email(raw_email)
+    findings = run_rules(parsed)
+    if enrich:
+        from .enrichment import enrich_findings
+
+        findings = findings + enrich_findings(parsed)
+    return score_findings(findings)
