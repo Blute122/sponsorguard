@@ -1,0 +1,31 @@
+From: HelloFresh Influencer Team <media@hellofresh-media.com>
+To: creator@example.com
+Subject: HelloFresh campaign brief attached
+Authentication-Results: mx.google.com; spf=pass smtp.mailfrom=hellofresh-media.com; dkim=pass; dmarc=pass
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="EVALBOUND"
+
+--EVALBOUND
+Content-Type: text/plain; charset="utf-8"
+
+Hi,
+
+Thanks for your interest in the HelloFresh creator campaign. Please download the
+creative brief attached and let us know your availability.
+
+Best,
+Sofia Lang
+HelloFresh Influencer Team
+
+--EVALBOUND
+Content-Type: application/zip; name="hellofresh_brief.zip"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="hellofresh_brief.zip"
+
+UEsDBBQAAAAIAEEjI12HAZD5NwAAADcAAAAUAAAAaGVsbG9mcmVzaF9icmllZi5leGUFwcERgCAQ
+BMFUJgFDMQF/Ky4frzwKwdLs7V43qk7T9EXqoGbHj4KSvc2bhSsHoluBX5c5tId/UEsDBBQAAAAI
+AEEjI13mLAncHwAAACAAAAAKAAAAcmVhZG1lLnR4dPMvSM1TKMlIVdBLrUhVKMlXKMtMLQcLJBVl
+pqbpAQBQSwECFAAUAAAACABBIyNdhwGQ+TcAAAA3AAAAFAAAAAAAAAAAAAAAgAEAAAAAaGVsbG9m
+cmVzaF9icmllZi5leGVQSwECFAAUAAAACABBIyNd5iwJ3B8AAAAgAAAACgAAAAAAAAAAAAAAgAFp
+AAAAcmVhZG1lLnR4dFBLBQYAAAAAAgACAHoAAACwAAAAAAA=
+--EVALBOUND--

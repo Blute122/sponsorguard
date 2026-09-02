@@ -1,0 +1,13 @@
+From: Skillshare Creator Team <creators@skillshare.com>
+Reply-To: creators@skillshare.com
+To: creator@example.com
+Subject: Partnership opportunity with Skillshare
+Authentication-Results: mx.google.com; spf=pass smtp.mailfrom=skillshare.com; dkim=pass; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+
+<html><body>
+<p>Hi, we enjoyed your recent videos and would love to discuss a paid partnership.</p>
+<p>You can read about our creator program at <a href="https://www.skillshare.com/partners">skillshare.com/partners</a>.</p>
+<p>If you're interested, just reply and we'll set up a call at your convenience.</p>
+</body></html>

@@ -1,0 +1,11 @@
+filename,source,notes
+scam_nordvpn.eml,synthetic,Shared test fixture. Kitchen-sink scam: auth fail + typosquat + credential link + encrypted zip.
+freemail_impersonation.eml,synthetic,Brand name in display name sent from a Gmail account. Auth passes - Gmail really does pass SPF.
+typosquat_lookalike.eml,synthetic,Lookalike registrable domain. Auth fully passes: attacker configured their own domain correctly.
+credential_link.eml,synthetic,Deliberately subtle. No brand impersonation - only a sign-in link plus a credential ask. Lands in High risk.
+attachment_bait.eml,synthetic,Zip attachment containing an .exe. Hard-flagged regardless of arithmetic.
+legit_brand.eml,synthetic,Shared test fixture. Clean direct brand outreach.
+esp_routed_brand.eml,synthetic,Brand mail with an ESP tracking link (mailchi.mp) that does not embed the brand token.
+direct_brand_plain.eml,synthetic,Plain-text brand email linking only to the brand's own registrable domain.
+short_informal_offer.eml,synthetic,Small roastery with dmarc=none. Trips one low-weight auth signal but stays Low.
+agency_reply_to.eml,synthetic,Genuine agency mail whose Reply-To is a different domain. Trips reply_to_mismatch on legit mail.

@@ -148,6 +148,31 @@ pip install -r requirements.txt -r api/requirements.txt
 pytest -q
 ```
 
+## Evaluating the engine
+
+Detection quality is measured against a labeled corpus rather than asserted:
+
+```bash
+python eval/run_eval.py     # precision/recall/F1 + per-rule stats -> eval/report.json
+pytest -q                   # includes the regression gate
+```
+
+The harness scores every email in `eval/corpus/{scam,legit}/` with
+`analyze(enrich=False)` — offline and deterministic — and reports precision,
+recall and F1 at the three real band boundaries (Caution ≥15, High risk ≥35,
+Dangerous ≥60), plus a confusion matrix, every misclassified filename, and how
+often each rule fires on scam vs legit mail.
+
+False alarms and misses are reported separately, never averaged away: wrongly
+telling a creator that a real paycheck is an attack is a far worse error than
+under-scoring a scam that a lower band still catches. A CI gate holds "no genuine
+email reaches Dangerous" at zero.
+
+**The seeded corpus is entirely synthetic**, so the headline numbers only show
+the engine works, not how well it generalises. Real mail goes in a gitignored
+`eval/corpus/private/` — see [eval/README.md](eval/README.md) for the collection
+and redaction rules.
+
 ## Honest limitations (read before trusting output)
 
 - **Auth checks depend on a trustworthy `Authentication-Results` header.** That's

@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+
+# Real emails used for evaluation. They contain PII and must never be committed.
+# See eval/README.md for the redaction rule.
+eval/corpus/private/
