@@ -77,6 +77,47 @@ report = analyze(open("email.eml", "rb").read())
 print(report.verdict, report.score)
 ```
 
+## Run the web app
+
+The paste-email web UI is the intended product form: paste a raw email, get the
+scored report rendered in the browser. No Gmail OAuth, no database, no accounts.
+
+It has two pieces — a thin FastAPI wrapper around the engine, and a Vite + React
+front end. The core `sponsorguard/` package stays stdlib-only; the API's
+dependencies live in a separate `api/requirements.txt`.
+
+**Backend** (from the repo root):
+
+```bash
+pip install -r api/requirements.txt
+uvicorn api.main:app --reload --port 8000
+```
+
+That serves `POST /analyze` — it takes `{ "email_raw": "<string>" }` and returns
+the report dict plus an `auth_available` flag (false when the pasted message had
+no `Authentication-Results` header, so the UI can say SPF/DKIM/DMARC were
+*skipped*, not passed).
+
+**Frontend** (in a second terminal, from `web/`):
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Then open the printed URL (default http://localhost:5173). The two "Load
+example" buttons populate the textarea from the bundled `.eml` fixtures, so it
+demos with zero typing. The front end talks to the API at http://localhost:8000
+by default; override with a `VITE_API_URL` env var if you run it elsewhere.
+
+**Tests** (both suites, from the repo root):
+
+```bash
+pip install -r requirements.txt -r api/requirements.txt
+pytest -q
+```
+
 ## Honest limitations (read before trusting output)
 
 - **Auth checks depend on a trustworthy `Authentication-Results` header.** That's
@@ -97,8 +138,9 @@ print(report.verdict, report.score)
 
 ## Roadmap
 
-- Paste-email web UI (FastAPI + React) — the primary intended front end; no
-  Gmail OAuth required, which sidesteps Google's restricted-scope security review.
+- ~~Paste-email web UI (FastAPI + React)~~ — **built** (see *Run the web app*
+  above); no Gmail OAuth required, which sidesteps Google's restricted-scope
+  security review.
 - Live SPF evaluation from the originating IP.
 - Domain-age enrichment via RDAP (async, timeout-guarded, degrades to neutral).
 - Optional Gmail add-on (note: reading inboxes needs a restricted-scope OAuth

@@ -1,0 +1,8 @@
+# Dependencies for the web API layer ONLY.
+# The core `sponsorguard/` package stays stdlib-only — do not add these there.
+fastapi>=0.110
+uvicorn>=0.29
+
+# Test-only: FastAPI's TestClient (used by api/test_api.py) is backed by httpx.
+# starlette + pydantic come in transitively with fastapi.
+httpx>=0.27
