@@ -8,13 +8,15 @@ import legitRaw from '../../tests/fixtures/legit_brand.eml?raw'
 export const EXAMPLES = [
   {
     key: 'scam',
-    label: 'Load scam example',
+    label: 'a scam email',
+    tone: 'bad',
     hint: 'Fake NordVPN brand deal',
     raw: scamRaw,
   },
   {
     key: 'legit',
-    label: 'Load legit example',
+    label: 'a real offer',
+    tone: 'good',
     hint: 'Real Skillshare outreach',
     raw: legitRaw,
   },

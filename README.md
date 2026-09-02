@@ -135,10 +135,11 @@ npm install
 npm run dev
 ```
 
-Then open the printed URL (default http://localhost:5173). The two "Load
-example" buttons populate the textarea from the bundled `.eml` fixtures, so it
-demos with zero typing. The front end talks to the API at http://localhost:8000
-by default; override with a `VITE_API_URL` env var if you run it elsewhere.
+Then open the printed URL (default http://localhost:5173). The two example chips
+— *a scam email* and *a real offer* — populate the textarea from the bundled
+`.eml` fixtures, so it demos with zero typing. The front end talks to the API at
+http://localhost:8000 by default; override with a `VITE_API_URL` env var if you
+run it elsewhere.
 
 **Tests** (both suites, from the repo root):
 
