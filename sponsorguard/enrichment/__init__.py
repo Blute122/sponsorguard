@@ -13,6 +13,7 @@ determine scores exactly as it would without the network.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Callable, Optional
 
 from ..domains import registrable_domain
@@ -87,7 +88,36 @@ def enrich_findings(
     *,
     lookup: Optional[LookupFn] = None,
     now: Optional[datetime] = None,
+    threat_mode: str = "snapshot",
+    threat_providers: Optional[list] = None,
+    cache_dir: Optional[Path] = None,
+    threat_statuses: Optional[list] = None,
 ) -> list[Finding]:
-    """The enrichment pass: zero or more findings to append before scoring."""
-    finding = domain_age_finding(email, lookup=lookup, now=now)
-    return [finding] if finding else []
+    """The enrichment pass: zero or more findings to append before scoring.
+
+    Two independent, fail-safe signals:
+      * sender-domain age via RDAP (network; live), and
+      * link reputation via threat-intel feeds (offline snapshot by default, so
+        this adds no network call; live is opt-in via ``threat_mode="live"``).
+
+    Either yielding nothing — no snapshot, no key, a timeout — leaves the score
+    exactly as the pure engine produced it. A missing/stale snapshot is silent
+    here; use the ``threatintel`` CLI's ``status`` to see snapshot health, or
+    pass ``threat_statuses`` to collect it.
+    """
+    findings: list[Finding] = []
+
+    age = domain_age_finding(email, lookup=lookup, now=now)
+    if age:
+        findings.append(age)
+
+    try:
+        from .threatintel import threatintel_findings  # lazy: keeps -m clean
+        findings.extend(threatintel_findings(
+            email, providers=threat_providers, mode=threat_mode,
+            cache_dir=cache_dir, now=now, statuses=threat_statuses,
+        ))
+    except Exception:
+        pass  # belt-and-suspenders: enrichment never breaks a scan
+
+    return findings

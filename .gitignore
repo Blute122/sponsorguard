@@ -16,3 +16,7 @@ eval/tools/.seen_ids
 # Local credential/config files (GMAIL_APP_PASSWORD etc). Never commit.
 .env
 *.env
+
+# Threat-intel feed snapshots: cache-only, never committed (large, licence-bound).
+.threatintel_cache/
+# Optional Google Safe Browsing key (SPONSORGUARD_GSB_API_KEY) lives in env/.env.

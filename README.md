@@ -106,6 +106,51 @@ honest caveat below: some TLDs omit the registration date in RDAP, which
 correctly yields **no finding** rather than a false signal. Caching and
 rate-limiting are intentionally out of scope for now (future work).
 
+### Threat-intel enrichment (opt-in, snapshot by default)
+
+Also under `enrich=True`, each link in the message is checked against known-bad
+feeds. A confirmed-bad URL is near-definitive, so these are strong LINKS-category
+findings (35 pts each, under the category cap of 40, so they push toward
+Dangerous through the **normal scoring path** — no hard override):
+
+| Finding | Feed | Key needed |
+|---------|------|------------|
+| `links.known_malware_url` | [URLhaus](https://urlhaus.abuse.ch/) | no |
+| `links.known_phishing_url` | [OpenPhish](https://openphish.com/) community feed | no |
+| `links.safe_browsing_flagged` | Google Safe Browsing (live-only) | yes — `SPONSORGUARD_GSB_API_KEY` |
+
+Two consult modes behind one interface
+([`sponsorguard/enrichment/threatintel.py`](sponsorguard/enrichment/threatintel.py)):
+
+- **Snapshot (default).** Feeds are downloaded to a local cache by a separate
+  refresh command; scans read that cache **offline and deterministically** and
+  never request the malicious URL itself. This is why `analyze(enrich=True)`
+  makes no network call for link reputation — only RDAP does.
+- **Live (opt-in).** Per-lookup API calls for the freshest data
+  (`enrich_findings(..., threat_mode="live")`). Slower and network-dependent.
+
+Refresh the snapshots (cadence: **daily–weekly** is plenty; the feeds move
+faster than most scam campaigns rotate domains):
+
+```bash
+python -m sponsorguard.enrichment.threatintel refresh   # download/update snapshots
+python -m sponsorguard.enrichment.threatintel status    # show snapshot freshness
+```
+
+**Fails safe, always.** A missing snapshot, one older than 7 days (stale), an
+unparseable feed, a network error, or an absent GSB key all yield **no finding
+and no penalty** — a scan never silently falls back to live and never triggers a
+refresh itself (freshness is your job via the refresh command). Matching folds
+homoglyph/punycode host variants through the same skeleton the rules use, so a
+lookalike of a known-bad host still matches, and evidence shows the attacker's
+real (defanged) URL plus which feed and snapshot date matched.
+
+Google Safe Browsing is **live-only and key-gated**: without
+`SPONSORGUARD_GSB_API_KEY` set it stays fully dark (no finding, no error). Never
+commit a key — it lives in your environment (`.env` is gitignored). The snapshot
+cache (`.threatintel_cache/`) is gitignored too: this repo **never bundles feed
+data** (the feeds are large and licence-bound; keep them cache-only).
+
 ## Run the web app
 
 The paste-email web UI is the intended product form: paste a raw email, get the
@@ -187,6 +232,12 @@ and redaction rules.
   TLDs don't publish a `registration` event in RDAP; that yields **no finding**
   (neutral), never a false signal, and the same is true of any timeout or error.
   It never lowers a score and never runs unless you pass `enrich=True`.
+- **Threat-intel enrichment (opt-in) is only as fresh as its last refresh.** In
+  the default snapshot mode a lookup is offline and deterministic, so it reflects
+  the feed as of the last `threatintel refresh`; a missing/stale snapshot yields
+  **no finding**, never a penalty (it does not silently fall back to live). Feed
+  coverage is partial by nature — an absence of a hit is not proof a link is
+  safe. Google Safe Browsing is off unless `SPONSORGUARD_GSB_API_KEY` is set.
 - **RAR/7z contents aren't inspected** (no stdlib support) — flagged as
   uninspected archives at a lower weight rather than silently passed.
 - **The brand list (`data/brands.json`) goes stale.** It's versioned JSON on
