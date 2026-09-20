@@ -18,21 +18,42 @@ divisions done by hand.
 
 ## Corpus layout
 
-Label comes from the directory:
+Two attributes come from the path: the **label** (`scam` / `legit`) and the
+**tier**. Any directory that doesn't exist is skipped, so the original flat layout
+keeps working exactly as before.
 
 ```
 eval/corpus/
-  scam/          *.eml   emails that SHOULD be flagged
-  legit/         *.eml   genuine offers that should NOT be flagged
-  manifest.csv           optional: filename,source,notes
-  private/               gitignored - your real mail
+  scam/  legit/                 -> tier: sponsorship   (legacy flat layout)
+  private/ scam/  legit/        -> tier: sponsorship   (legacy, gitignored)
+  manifest.csv                     optional: filename,source,notes
+
+  sponsorship/                  -> tier: sponsorship   THE HEADLINE TIER
     scam/  legit/
+    private/ scam/  legit/         gitignored - your real mail
+    manifest.csv                   optional, overrides the root one
+
+  phishing-general/             -> tier: phishing-general   REGRESSION ONLY
+    scam/  legit/
+    private/ scam/  legit/
+    manifest.csv
 ```
 
-`manifest.csv` marks each file `synthetic` or `real`. It is optional; the
-harness runs fine without it. Files under `private/` with no manifest row are
-assumed `real` (that directory exists for exactly that purpose); public files
-with no row are recorded as `unspecified`.
+**Tiers** (see [COLLECTION.md](COLLECTION.md) §1): `sponsorship` is the hand-built,
+creator-specific set and the **only** one whose numbers back a claim — it is the
+headline report and the one the CI gate enforces. `phishing-general` is bulk public
+phishing/ham kept purely as a regression signal; it prints in its own section
+marked regression-only and is never gated on.
+
+The original flat `corpus/{scam,legit}` seeds *are* the sponsorship set, so they
+fold into that tier rather than forming a separate bucket. If the same email is
+reachable under two paths (e.g. a legacy seed also copied into `sponsorship/`) it
+is counted once.
+
+`manifest.csv` marks each file `synthetic` or `real`. It is optional; the harness
+runs fine without it. Files under any `private/` with no manifest row are assumed
+`real` (those directories exist for exactly that purpose); public files with no row
+are recorded as `unspecified`.
 
 ## Adding real emails (the part that actually matters)
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sys
 from dataclasses import dataclass, field
@@ -40,6 +41,25 @@ BANDS: list[tuple[str, int]] = [
 
 LABELS = ("scam", "legit")
 
+# Corpus tiers (eval/COLLECTION.md §1). Only the sponsorship tier backs product
+# claims; phishing-general is bulk public mail kept as a regression signal.
+TIER_SPONSORSHIP = "sponsorship"
+TIER_PHISHING = "phishing-general"
+TIERS = (TIER_SPONSORSHIP, TIER_PHISHING)
+
+# The tier whose numbers are the headline and whose invariants the gate enforces.
+HEADLINE_TIER = TIER_SPONSORSHIP
+
+# Where each tier lives under the corpus root, in discovery order.
+# `None` is the corpus root itself: the original flat corpus/{scam,legit} layout.
+# Those seeds ARE the sponsorship set, so they fold into that tier rather than
+# becoming a separate "legacy" bucket - the flat layout keeps working untouched.
+_TIER_ROOTS: list[tuple[str | None, str]] = [
+    (None, TIER_SPONSORSHIP),                 # corpus/{scam,legit} (+ private/)
+    (TIER_SPONSORSHIP, TIER_SPONSORSHIP),     # corpus/sponsorship/**
+    (TIER_PHISHING, TIER_PHISHING),           # corpus/phishing-general/**
+]
+
 # Below this per class, the numbers are directional at best.
 MEANINGFUL_N = 15
 
@@ -52,6 +72,7 @@ class Sample:
     path: Path
     label: str          # "scam" | "legit"
     source: str         # "synthetic" | "real" | "unspecified"
+    tier: str = TIER_SPONSORSHIP
     private: bool = False
     score: int = 0
     verdict: str = ""
@@ -79,29 +100,81 @@ def _read_manifest(corpus: Path) -> dict[str, str]:
     return out
 
 
+def _manifest_for(corpus: Path, subdir: str | None) -> dict[str, str]:
+    """Root manifest applies everywhere; a per-tier manifest overrides it."""
+    merged = _read_manifest(corpus)
+    if subdir:
+        merged.update(_read_manifest(corpus / subdir))
+    return merged
+
+
 def discover(corpus: Path, include_private: bool = True) -> list[Sample]:
-    """Collect labeled emails. Label comes from the directory name."""
-    manifest = _read_manifest(corpus)
+    """Collect labeled emails from every tier.
+
+    Two attributes come from the path: the LABEL (the scam/ or legit/ directory)
+    and the TIER (which top-level bucket it sits in). Layouts scanned:
+
+        corpus/{scam,legit}                        -> sponsorship  (legacy flat)
+        corpus/private/{scam,legit}                -> sponsorship  (legacy flat)
+        corpus/sponsorship/{scam,legit}            -> sponsorship
+        corpus/sponsorship/private/{scam,legit}    -> sponsorship
+        corpus/phishing-general/{scam,legit}       -> phishing-general
+        corpus/phishing-general/private/{scam,legit} -> phishing-general
+
+    Any path that does not exist is skipped silently, so a corpus holding only
+    the original flat seeds discovers exactly what it always did.
+    """
     samples: list[Sample] = []
+    seen_digests: set[str] = set()
 
-    roots: list[tuple[Path, bool]] = [(corpus, False)]
-    private_root = corpus / "private"
-    if include_private and private_root.is_dir():
-        roots.append((private_root, True))
+    for subdir, tier in _TIER_ROOTS:
+        base = corpus if subdir is None else corpus / subdir
+        if not base.is_dir():
+            continue
 
-    for root, is_private in roots:
-        for label in LABELS:
-            folder = root / label
-            if not folder.is_dir():
-                continue
-            for path in sorted(folder.glob("*.eml")):
-                # Manifest wins. Otherwise anything under private/ is assumed
-                # real (that directory exists precisely for real mail); public
-                # files with no manifest row stay "unspecified" rather than
-                # being silently counted as real.
-                source = manifest.get(path.name) or ("real" if is_private else "unspecified")
-                samples.append(Sample(path=path, label=label, source=source, private=is_private))
+        manifest = _manifest_for(corpus, subdir)
+
+        roots: list[tuple[Path, bool]] = [(base, False)]
+        private_root = base / "private"
+        if include_private and private_root.is_dir():
+            roots.append((private_root, True))
+
+        for root, is_private in roots:
+            for label in LABELS:
+                folder = root / label
+                if not folder.is_dir():
+                    continue
+                for path in sorted(folder.glob("*.eml")):
+                    # Guard against the same email being reachable twice - e.g. a
+                    # legacy seed also copied into sponsorship/. First path wins.
+                    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                    if digest in seen_digests:
+                        continue
+                    seen_digests.add(digest)
+
+                    # Manifest wins. Otherwise anything under private/ is assumed
+                    # real (that directory exists precisely for real mail); public
+                    # files with no manifest row stay "unspecified" rather than
+                    # being silently counted as real.
+                    source = manifest.get(path.name) or ("real" if is_private else "unspecified")
+                    samples.append(Sample(
+                        path=path, label=label, source=source,
+                        tier=tier, private=is_private,
+                    ))
     return samples
+
+
+def split_by_tier(samples: list[Sample]) -> dict[str, list[Sample]]:
+    """Group samples by tier, preserving the declared tier order."""
+    grouped: dict[str, list[Sample]] = {}
+    for s in samples:
+        grouped.setdefault(s.tier, []).append(s)
+    ordered = {t: grouped[t] for t in TIERS if grouped.get(t)}
+    # Anything with an unrecognised tier still surfaces rather than vanishing.
+    for t, items in grouped.items():
+        if t not in ordered:
+            ordered[t] = items
+    return ordered
 
 
 def evaluate(samples: list[Sample]) -> list[Sample]:
@@ -181,7 +254,20 @@ def _rule(width: int = 78) -> str:
     return "-" * width
 
 
-def render(samples: list[Sample], results: dict) -> str:
+def _band_table(w, block: dict) -> None:
+    """The shared band sweep table, used by every tier."""
+    w(_rule())
+    w(f"{'Band':<12}{'>=':>4}  {'TP':>3} {'FP':>3} {'TN':>3} {'FN':>3}  "
+      f"{'Precision':>9} {'Recall':>9} {'F1':>9}")
+    w(_rule())
+    for band, _ in BANDS:
+        m = block["bands"][band]
+        w(f"{band:<12}{m['threshold']:>4}  {m['tp']:>3} {m['fp']:>3} {m['tn']:>3} {m['fn']:>3}  "
+          f"{_pct(m['precision']):>9} {_pct(m['recall']):>9} {_pct(m['f1']):>9}")
+    w(_rule())
+
+
+def render(results: dict) -> str:
     out: list[str] = []
     w = out.append
 
@@ -189,6 +275,8 @@ def render(samples: list[Sample], results: dict) -> str:
     w("=" * 78)
     w("SponsorGuard - corpus evaluation")
     w("=" * 78)
+    w(f"HEADLINE TIER: {results['headline_tier']} "
+      "(the only tier whose numbers back product claims)")
     w(f"Corpus: {n['scam']} scam / {n['legit']} legit  ({n['total']} emails)")
     src = results["sources"]
     w(f"Provenance: {src.get('synthetic', 0)} synthetic, {src.get('real', 0)} real, "
@@ -208,15 +296,7 @@ def render(samples: list[Sample], results: dict) -> str:
     # ---- band sweep
     w("PRECISION / RECALL ACROSS THE PRODUCT'S BANDS")
     w("(positive class = scam; 'flagged' = score >= threshold)")
-    w(_rule())
-    w(f"{'Band':<12}{'>=':>4}  {'TP':>3} {'FP':>3} {'TN':>3} {'FN':>3}  "
-      f"{'Precision':>9} {'Recall':>9} {'F1':>9}")
-    w(_rule())
-    for band, _ in BANDS:
-        m = results["bands"][band]
-        w(f"{band:<12}{m['threshold']:>4}  {m['tp']:>3} {m['fp']:>3} {m['tn']:>3} {m['fn']:>3}  "
-          f"{_pct(m['precision']):>9} {_pct(m['recall']):>9} {_pct(m['f1']):>9}")
-    w(_rule())
+    _band_table(w, results)
     w("")
 
     # ---- per-band detail, with the asymmetry spelled out
@@ -269,8 +349,8 @@ def render(samples: list[Sample], results: dict) -> str:
     w(_rule())
     w(f"{'label':<7}{'score':>6}  {'verdict':<11}{'source':<12}file")
     w(_rule())
-    for s in sorted(samples, key=lambda x: (x.label, -x.score, x.name)):
-        w(f"{s.label:<7}{s.score:>6}  {s.verdict:<11}{s.source:<12}{s.name}")
+    for s in sorted(results["samples"], key=lambda x: (x["label"], -x["score"], x["file"])):
+        w(f"{s['label']:<7}{s['score']:>6}  {s['verdict']:<11}{s['source']:<12}{s['file']}")
     w(_rule())
     w("")
 
@@ -297,15 +377,7 @@ def render(samples: list[Sample], results: dict) -> str:
     if ro:
         w("REAL EMAILS ONLY (synthetic seeds excluded)")
         w(f"Corpus: {ro['n']['scam']} scam / {ro['n']['legit']} legit")
-        w(_rule())
-        w(f"{'Band':<12}{'>=':>4}  {'TP':>3} {'FP':>3} {'TN':>3} {'FN':>3}  "
-          f"{'Precision':>9} {'Recall':>9} {'F1':>9}")
-        w(_rule())
-        for band, _ in BANDS:
-            m = ro["bands"][band]
-            w(f"{band:<12}{m['threshold']:>4}  {m['tp']:>3} {m['fp']:>3} {m['tn']:>3} {m['fn']:>3}  "
-              f"{_pct(m['precision']):>9} {_pct(m['recall']):>9} {_pct(m['f1']):>9}")
-        w(_rule())
+        _band_table(w, ro)
         w("")
     else:
         w("REAL EMAILS ONLY: no emails are marked source=real, so the headline")
@@ -314,12 +386,38 @@ def render(samples: list[Sample], results: dict) -> str:
         w("Add real mail (see eval/README.md) before quoting any of this.")
         w("")
 
+    # ---- other tiers, reported separately and never mixed into the headline
+    for tier, block in results.get("tiers", {}).items():
+        if tier == results["headline_tier"]:
+            continue
+        tn = block["n"]
+        w("=" * 78)
+        w(f"TIER: {tier.upper()}  -  REGRESSION ONLY")
+        w("=" * 78)
+        w("These numbers DO NOT back product claims. This tier is bulk public mail")
+        w("kept to prove the engine handles real hostile traffic without choking or")
+        w("over-flagging legitimate mail. Only the sponsorship tier is quotable.")
+        w("")
+        w(f"Corpus: {tn['scam']} scam / {tn['legit']} legit  ({tn['total']} emails)")
+        if block["small_sample_warning"]:
+            w(f"Fewer than {MEANINGFUL_N} in at least one class - indicative only.")
+        _band_table(w, block)
+        w("")
+        for band, _ in BANDS:
+            m = block["bands"][band]
+            w(f"--- {tier} / {band} (score >= {m['threshold']}) ---")
+            w("                 flagged   not flagged")
+            w(f"  actual scam    {m['tp']:>7}   {m['fn']:>11}")
+            w(f"  actual legit   {m['fp']:>7}   {m['tn']:>11}")
+            w("")
+
     return "\n".join(out)
 
 
 # --------------------------------------------------------------------- main
 
-def build_results(samples: list[Sample]) -> dict:
+def metrics_block(samples: list[Sample]) -> dict:
+    """The full metric set for one group of samples (one tier, or all of them)."""
     counts = {lab: sum(1 for s in samples if s.label == lab) for lab in LABELS}
     counts["total"] = len(samples)
 
@@ -339,6 +437,7 @@ def build_results(samples: list[Sample]) -> dict:
                 "file": s.name,
                 "label": s.label,
                 "source": s.source,
+                "tier": s.tier,
                 "private": s.private,
                 "score": s.score,
                 "verdict": s.verdict,
@@ -364,6 +463,22 @@ def build_results(samples: list[Sample]) -> dict:
     return results
 
 
+def build_results(samples: list[Sample]) -> dict:
+    """Tier-aware report.
+
+    The top level carries the HEADLINE TIER (sponsorship) so every field that
+    existed before this change still means the same thing - for a corpus holding
+    only the original flat seeds the top level is unchanged, since those seeds
+    resolve to the sponsorship tier. `tiers` adds the per-tier breakdown, and
+    only tiers that actually contain emails appear there.
+    """
+    by_tier = split_by_tier(samples)
+    results = metrics_block(by_tier.get(HEADLINE_TIER, []))
+    results["headline_tier"] = HEADLINE_TIER
+    results["tiers"] = {tier: metrics_block(items) for tier, items in by_tier.items()}
+    return results
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Evaluate SponsorGuard against a labeled corpus.")
     ap.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS,
@@ -386,7 +501,7 @@ def main(argv=None) -> int:
 
     evaluate(samples)
     results = build_results(samples)
-    print(render(samples, results))
+    print(render(results))
 
     if not args.no_json:
         args.out.parent.mkdir(parents=True, exist_ok=True)

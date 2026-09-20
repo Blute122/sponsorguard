@@ -75,7 +75,7 @@
       "legit": 0
     },
     "content.brief_download_pretext": {
-      "scam": 1,
+      "scam": 2,
       "legit": 0
     },
     "content.credential_request": {
@@ -120,6 +120,7 @@
       "file": "agency_reply_to.eml",
       "label": "legit",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 10,
       "verdict": "Low",
@@ -131,6 +132,7 @@
       "file": "direct_brand_plain.eml",
       "label": "legit",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 0,
       "verdict": "Low",
@@ -140,6 +142,7 @@
       "file": "esp_routed_brand.eml",
       "label": "legit",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 0,
       "verdict": "Low",
@@ -149,6 +152,7 @@
       "file": "legit_brand.eml",
       "label": "legit",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 0,
       "verdict": "Low",
@@ -158,6 +162,7 @@
       "file": "short_informal_offer.eml",
       "label": "legit",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 5,
       "verdict": "Low",
@@ -169,19 +174,22 @@
       "file": "attachment_bait.eml",
       "label": "scam",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
-      "score": 90,
+      "score": 100,
       "verdict": "Dangerous",
       "findings": [
         "identity.display_name_impersonation",
         "identity.typosquat",
-        "attach.executable_in_archive"
+        "attach.executable_in_archive",
+        "content.brief_download_pretext"
       ]
     },
     {
       "file": "credential_link.eml",
       "label": "scam",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 53,
       "verdict": "High risk",
@@ -195,6 +203,7 @@
       "file": "freemail_impersonation.eml",
       "label": "scam",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 63,
       "verdict": "Dangerous",
@@ -208,6 +217,7 @@
       "file": "scam_nordvpn.eml",
       "label": "scam",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 100,
       "verdict": "Dangerous",
@@ -231,6 +241,7 @@
       "file": "typosquat_lookalike.eml",
       "label": "scam",
       "source": "synthetic",
+      "tier": "sponsorship",
       "private": false,
       "score": 60,
       "verdict": "Dangerous",
@@ -240,5 +251,263 @@
       ]
     }
   ],
-  "real_only": null
+  "real_only": null,
+  "headline_tier": "sponsorship",
+  "tiers": {
+    "sponsorship": {
+      "n": {
+        "scam": 5,
+        "legit": 5,
+        "total": 10
+      },
+      "sources": {
+        "synthetic": 10
+      },
+      "small_sample_warning": true,
+      "meaningful_n": 15,
+      "bands": {
+        "Caution": {
+          "threshold": 15,
+          "tp": 5,
+          "fp": 0,
+          "tn": 5,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarms": [],
+          "misses": []
+        },
+        "High risk": {
+          "threshold": 35,
+          "tp": 5,
+          "fp": 0,
+          "tn": 5,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_alarms": [],
+          "misses": []
+        },
+        "Dangerous": {
+          "threshold": 60,
+          "tp": 4,
+          "fp": 0,
+          "tn": 5,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.8,
+          "f1": 0.888888888888889,
+          "false_alarms": [],
+          "misses": [
+            "credential_link.eml"
+          ]
+        }
+      },
+      "per_rule": {
+        "attach.executable_in_archive": {
+          "scam": 1,
+          "legit": 0
+        },
+        "attach.password_protected_archive": {
+          "scam": 1,
+          "legit": 0
+        },
+        "auth.dkim_fail": {
+          "scam": 1,
+          "legit": 0
+        },
+        "auth.dmarc_fail": {
+          "scam": 1,
+          "legit": 0
+        },
+        "auth.dmarc_none": {
+          "scam": 0,
+          "legit": 1
+        },
+        "auth.spf_fail": {
+          "scam": 1,
+          "legit": 0
+        },
+        "content.brief_download_pretext": {
+          "scam": 2,
+          "legit": 0
+        },
+        "content.credential_request": {
+          "scam": 2,
+          "legit": 0
+        },
+        "content.upfront_fee": {
+          "scam": 1,
+          "legit": 0
+        },
+        "content.urgency": {
+          "scam": 3,
+          "legit": 0
+        },
+        "identity.display_name_impersonation": {
+          "scam": 4,
+          "legit": 0
+        },
+        "identity.freemail_brand": {
+          "scam": 1,
+          "legit": 0
+        },
+        "identity.reply_to_mismatch": {
+          "scam": 1,
+          "legit": 1
+        },
+        "identity.typosquat": {
+          "scam": 3,
+          "legit": 0
+        },
+        "links.brand_in_subdomain": {
+          "scam": 1,
+          "legit": 0
+        },
+        "links.credential_keywords": {
+          "scam": 2,
+          "legit": 0
+        }
+      },
+      "samples": [
+        {
+          "file": "agency_reply_to.eml",
+          "label": "legit",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 10,
+          "verdict": "Low",
+          "findings": [
+            "identity.reply_to_mismatch"
+          ]
+        },
+        {
+          "file": "direct_brand_plain.eml",
+          "label": "legit",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 0,
+          "verdict": "Low",
+          "findings": []
+        },
+        {
+          "file": "esp_routed_brand.eml",
+          "label": "legit",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 0,
+          "verdict": "Low",
+          "findings": []
+        },
+        {
+          "file": "legit_brand.eml",
+          "label": "legit",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 0,
+          "verdict": "Low",
+          "findings": []
+        },
+        {
+          "file": "short_informal_offer.eml",
+          "label": "legit",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 5,
+          "verdict": "Low",
+          "findings": [
+            "auth.dmarc_none"
+          ]
+        },
+        {
+          "file": "attachment_bait.eml",
+          "label": "scam",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 100,
+          "verdict": "Dangerous",
+          "findings": [
+            "identity.display_name_impersonation",
+            "identity.typosquat",
+            "attach.executable_in_archive",
+            "content.brief_download_pretext"
+          ]
+        },
+        {
+          "file": "credential_link.eml",
+          "label": "scam",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 53,
+          "verdict": "High risk",
+          "findings": [
+            "content.credential_request",
+            "links.credential_keywords",
+            "content.urgency"
+          ]
+        },
+        {
+          "file": "freemail_impersonation.eml",
+          "label": "scam",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 63,
+          "verdict": "Dangerous",
+          "findings": [
+            "identity.display_name_impersonation",
+            "identity.freemail_brand",
+            "content.urgency"
+          ]
+        },
+        {
+          "file": "scam_nordvpn.eml",
+          "label": "scam",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 100,
+          "verdict": "Dangerous",
+          "findings": [
+            "identity.display_name_impersonation",
+            "identity.typosquat",
+            "attach.password_protected_archive",
+            "content.credential_request",
+            "auth.spf_fail",
+            "links.brand_in_subdomain",
+            "content.upfront_fee",
+            "auth.dmarc_fail",
+            "links.credential_keywords",
+            "auth.dkim_fail",
+            "content.brief_download_pretext",
+            "identity.reply_to_mismatch",
+            "content.urgency"
+          ]
+        },
+        {
+          "file": "typosquat_lookalike.eml",
+          "label": "scam",
+          "source": "synthetic",
+          "tier": "sponsorship",
+          "private": false,
+          "score": 60,
+          "verdict": "Dangerous",
+          "findings": [
+            "identity.display_name_impersonation",
+            "identity.typosquat"
+          ]
+        }
+      ],
+      "real_only": null
+    }
+  }
 }

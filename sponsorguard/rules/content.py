@@ -1,23 +1,21 @@
-"""Content rules — pattern-match the persuasion tactics in the body text."""
-from __future__ import annotations
+"""Content rules — pattern-match the persuasion tactics in the body text.
 
-import re
+Each rule matches against the NORMALIZED, merged body (``email.body_norm`` /
+``body_full`` via ``evidence_from_raw``) so evasions — zero-width splits,
+homoglyphs, full-width forms, HTML-entity encoding, bidi wrapping — collapse to
+their intent before matching. The evidence quoted in every Finding is still the
+attacker's real text, never the folded skeleton.
+"""
+from __future__ import annotations
 
 from . import rule
 from ..models import Category, Finding, ParsedEmail, Severity
-
-
-def _first_match(text: str, patterns: list[str]) -> str | None:
-    for pat in patterns:
-        m = re.search(pat, text, re.IGNORECASE)
-        if m:
-            return m.group(0)
-    return None
+from ..normalize import evidence_from_raw
 
 
 @rule
 def credential_request(email: ParsedEmail):
-    hit = _first_match(email.body_text, [
+    hit = evidence_from_raw(email.body_full, [
         r"\b(your )?(account )?password\b", r"\btwo[- ]?factor\b", r"\b2fa\b",
         r"\blog ?in (to|with) your\b", r"\bverify your (account|channel|identity)\b",
     ])
@@ -34,7 +32,7 @@ def credential_request(email: ParsedEmail):
 
 @rule
 def upfront_fee(email: ParsedEmail):
-    hit = _first_match(email.body_text, [
+    hit = evidence_from_raw(email.body_full, [
         r"\b(upfront|advance|shipping|handling)\s+fee\b",
         r"\b(tax|verification|processing)\s+(fee|deposit)\b",
         r"\brefundable deposit\b",
@@ -52,7 +50,7 @@ def upfront_fee(email: ParsedEmail):
 
 @rule
 def gift_card_or_crypto(email: ParsedEmail):
-    hit = _first_match(email.body_text, [
+    hit = evidence_from_raw(email.body_full, [
         r"\bgift ?card(s)?\b", r"\b(bitcoin|btc|ethereum|eth|usdt|crypto(currency)?)\b",
     ])
     if hit:
@@ -68,7 +66,7 @@ def gift_card_or_crypto(email: ParsedEmail):
 
 @rule
 def brief_download_pretext(email: ParsedEmail):
-    hit = _first_match(email.body_text, [
+    hit = evidence_from_raw(email.body_full, [
         r"\b(download|open|extract).{0,30}(creative )?brief\b",
         r"\b(download|open|extract).{0,30}(game )?(demo|build)\b",
         r"\bpassword to (the|open) (the )?(file|archive|zip)\b",
@@ -86,7 +84,7 @@ def brief_download_pretext(email: ParsedEmail):
 
 @rule
 def urgency_pressure(email: ParsedEmail):
-    hit = _first_match(email.body_text, [
+    hit = evidence_from_raw(email.body_full, [
         r"\b(within|in) \d+ (hours|hrs|days)\b", r"\b(urgent|act now|immediately|expires? (today|soon))\b",
         r"\blimited (time|slots?)\b",
     ])
@@ -99,3 +97,26 @@ def urgency_pressure(email: ParsedEmail):
             remediation="Slow down — real deals survive a day of verification.",
         )
     return None
+
+
+@rule
+def text_html_mismatch(email: ParsedEmail):
+    """Plain-text and HTML parts carry meaningfully different content.
+
+    A benign ``text/plain`` beside a malicious ``text/html`` is a known way to
+    show a scanner the clean part while the victim's client renders the other.
+    This is a SOFT signal — legitimate multipart mail diverges too (a plain
+    'view in browser' stub beside a rich HTML body) — so it is deliberately
+    low-weight, matching the other soft content signals, and the merged-body
+    matching above already catches whatever payload the HTML actually carried.
+    """
+    if not email.text_html_mismatch:
+        return None
+    return Finding(
+        id="content.text_html_mismatch",
+        category=Category.CONTENT, points=8, severity=Severity.LOW,
+        evidence="plain-text and HTML parts differ substantially",
+        explanation="The message shows different content in its plain-text and HTML parts — "
+                    "a trick used to hide the real payload from automated scanners.",
+        remediation="Read the message as your mail client renders it, and weigh this with the other signals.",
+    )

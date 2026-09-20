@@ -18,7 +18,14 @@ from __future__ import annotations
 
 import pytest
 
-from run_eval import BANDS, build_results, discover, evaluate, DEFAULT_CORPUS
+from run_eval import (
+    BANDS,
+    DEFAULT_CORPUS,
+    HEADLINE_TIER,
+    build_results,
+    discover,
+    evaluate,
+)
 
 # --------------------------------------------------------------- thresholds
 
@@ -42,7 +49,7 @@ _THRESHOLDS = dict(BANDS)
 
 
 @pytest.fixture(scope="module")
-def results():
+def report():
     """Evaluate the corpus once for the whole module."""
     if not DEFAULT_CORPUS.is_dir():
         pytest.skip(f"no corpus at {DEFAULT_CORPUS}; skipping eval gate")
@@ -51,6 +58,19 @@ def results():
         pytest.skip("corpus contains no .eml files; skipping eval gate")
     evaluate(samples)
     return build_results(samples)
+
+
+@pytest.fixture(scope="module")
+def results(report):
+    """The SPONSORSHIP tier only - the trust-critical, claim-backing set.
+
+    phishing-general is deliberately excluded: it is bulk public mail kept as a
+    regression signal, not a pass/fail bar, so it can never fail the build.
+    """
+    tier = report.get("tiers", {}).get(HEADLINE_TIER)
+    if not tier or not tier["n"]["total"]:
+        pytest.skip(f"no emails in the {HEADLINE_TIER} tier; skipping eval gate")
+    return tier
 
 
 def _require_corpus(results):

@@ -5,6 +5,7 @@ from . import rule
 from ..brands import load_brands
 from ..domains import is_punycode, registrable_domain
 from ..models import Category, Finding, ParsedEmail, Severity
+from ..normalize import host_skeleton
 
 _CRED_KEYWORDS = ("login", "signin", "sign-in", "verify", "confirm", "studio", "account", "secure")
 
@@ -51,10 +52,14 @@ def brand_in_subdomain_only(email: ParsedEmail):
         reg = registrable_domain(link.href_domain)
         if not reg:
             continue
+        # Fold confusables so a homoglyph brand token in the host still matches;
+        # evidence below quotes the real host and registrable domain.
+        host_sk = host_skeleton(link.href_domain)
+        reg_sk = host_skeleton(reg)
         for brand in load_brands():
             token = brand.domains[0].split(".")[0] if brand.domains else brand.name.lower()
             # Brand name appears in the host but NOT as the registrable domain.
-            if token in link.href_domain and token not in reg:
+            if token in host_sk and token not in reg_sk:
                 findings.append(Finding(
                     id="links.brand_in_subdomain",
                     category=Category.LINKS,

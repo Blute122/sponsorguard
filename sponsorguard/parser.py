@@ -5,6 +5,7 @@ attachment rules can inspect archives without re-parsing.
 """
 from __future__ import annotations
 
+import html
 import re
 from email import message_from_bytes, message_from_string
 from email.message import Message
@@ -13,6 +14,7 @@ from html.parser import HTMLParser
 
 from .domains import domain_of
 from .models import Attachment, Link, ParsedEmail
+from .normalize import merge_bodies, normalize, text_html_divergence
 
 _URL_RE = re.compile(r"https?://[^\s<>\")]+", re.IGNORECASE)
 
@@ -86,6 +88,20 @@ def _extract_links(plain: str, html: str) -> list[Link]:
     return links
 
 
+def _html_to_text(html_src: str) -> str:
+    """Strip tags, THEN decode entities.
+
+    Order matters: stripping first removes real markup (`<p>`), and decoding
+    afterwards turns entity-encoded text (`&#112;assword`, `&lt;`) into the
+    literal characters the sender meant — without a real `<p>` and an
+    entity-encoded `&lt;p&gt;` being treated the same way.
+    """
+    if not html_src:
+        return ""
+    stripped = re.sub(r"<[^>]+>", " ", html_src)
+    return html.unescape(stripped)
+
+
 def _extract_attachments(msg: Message) -> list[Attachment]:
     out: list[Attachment] = []
     for part in msg.walk():
@@ -110,9 +126,15 @@ def parse_email(raw: str | bytes) -> ParsedEmail:
 
     display_name, from_addr = parseaddr(msg.get("From", ""))
     _, reply_to = parseaddr(msg.get("Reply-To", ""))
-    plain, html = _extract_bodies(msg)
-    # Fall back to a stripped-tags view of the HTML if there is no plain part.
-    body_raw = plain or re.sub(r"<[^>]+>", " ", html)
+    plain, html_src = _extract_bodies(msg)
+    html_text = _html_to_text(html_src)  # tags stripped, entities decoded
+    # Fall back to the HTML-derived text if there is no plain part (unchanged
+    # single-part view for the existing rules; identical when there are no
+    # entities to decode).
+    body_raw = plain or html_text
+    # Merged view so a payload hidden in only one MIME part is still visible to
+    # content rules, and its normalized form for evasion-resistant matching.
+    body_full = merge_bodies(plain, html_text)
 
     return ParsedEmail(
         from_addr=from_addr.lower(),
@@ -123,7 +145,10 @@ def parse_email(raw: str | bytes) -> ParsedEmail:
         subject=msg.get("Subject", "").strip(),
         body_text=body_raw.lower(),
         body_raw=body_raw,
-        links=_extract_links(plain, html),
+        body_full=body_full,
+        body_norm=normalize(body_full),
+        text_html_mismatch=text_html_divergence(plain, html_text),
+        links=_extract_links(plain, html_src),
         attachments=_extract_attachments(msg),
         auth_results=msg.get("Authentication-Results"),
     )

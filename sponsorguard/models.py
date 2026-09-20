@@ -52,8 +52,12 @@ class ParsedEmail:
     reply_to: str = ""
     reply_to_domain: str = ""
     subject: str = ""
-    body_text: str = ""          # normalized, lowercased plain text for content rules
+    body_text: str = ""          # lowercased single-part body, kept as-is for existing rules
     body_raw: str = ""           # original text (any casing) for evidence snippets
+    # --- normalization pass (added alongside the raw fields; never overwrites them) ---
+    body_full: str = ""          # raw plain + HTML text merged; the evidence source
+    body_norm: str = ""          # normalized(body_full): the matching surface for content rules
+    text_html_mismatch: bool = False  # plain and HTML parts diverge meaningfully (soft evasion signal)
     links: list[Link] = field(default_factory=list)
     attachments: list[Attachment] = field(default_factory=list)
     auth_results: Optional[str] = None  # raw Authentication-Results header, or None if absent

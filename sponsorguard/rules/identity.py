@@ -5,11 +5,16 @@ from . import rule
 from ..brands import load_brands
 from ..domains import FREEMAIL, levenshtein, normalize_homoglyphs, registrable_domain
 from ..models import Category, Finding, ParsedEmail, Severity
+from ..normalize import host_skeleton, normalize
 
 
 def _mentions_brand(text: str):
-    """Return the first Brand whose alias appears in the text, else None."""
-    low = text.lower()
+    """Return the first Brand whose alias appears in the text, else None.
+
+    Matches on the NORMALIZED view so a homoglyph brand name (``Аudible`` with a
+    Cyrillic А) or a full-width/zero-width variant still resolves to the brand.
+    """
+    low = normalize(text)
     for brand in load_brands():
         if any(alias in low for alias in brand.aliases):
             return brand
@@ -20,7 +25,7 @@ def _mentions_brand(text: str):
 def freemail_claiming_brand(email: ParsedEmail):
     if email.from_domain not in FREEMAIL:
         return None
-    brand = _mentions_brand(f"{email.display_name} {email.subject} {email.body_text}")
+    brand = _mentions_brand(f"{email.display_name} {email.subject} {email.body_full}")
     if brand:
         return Finding(
             id="identity.freemail_brand",
@@ -66,9 +71,11 @@ def typosquat_domain(email: ParsedEmail):
             # longer hyphenated domain (nord-vpn-press.com).
             legit_label = legit.split(".")[0]
             from_label = from_reg.split(".")[0]
-            # Normalize homoglyphs (n0rdvpn -> nordvpn) before comparing, so a
-            # digit-swap can't slip past either check.
-            norm_label = normalize_homoglyphs(from_label)
+            # Fold both Unicode confusables (Cyrillic/Greek lookalikes) and the
+            # digit swaps (n0rdvpn -> nordvpn) before comparing, so neither a
+            # homoglyph nor a digit-swap can slip past. Evidence below still
+            # quotes the real registrable domain.
+            norm_label = normalize_homoglyphs(host_skeleton(from_label))
             norm_compact = norm_label.replace("-", "")
             dist = levenshtein(norm_label, legit_label)
             embedded = legit_label in norm_compact and from_reg != legit

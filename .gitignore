@@ -7,3 +7,12 @@ __pycache__/
 # Real emails used for evaluation. They contain PII and must never be committed.
 # See eval/README.md for the redaction rule.
 eval/corpus/private/
+
+# Collection tool output: raw personal mail awaiting manual triage, plus the
+# dedupe store. Never commit either. See eval/tools/README.md.
+eval/corpus/sponsorship/review/
+eval/tools/.seen_ids
+
+# Local credential/config files (GMAIL_APP_PASSWORD etc). Never commit.
+.env
+*.env
