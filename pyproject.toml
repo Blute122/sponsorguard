@@ -1,0 +1,13 @@
+# Deployment manifest for Vercel (entrypoint: app.py).
+#
+# Lists only what the hosted app needs at runtime: the engine itself is
+# stdlib-only, FastAPI serves it. Local dev/test deps stay in requirements.txt
+# and api/requirements.txt.
+[project]
+name = "sponsorguard"
+version = "0.1.0"
+description = "Explainable scanner for fake brand-deal / sponsorship scam emails."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110",
+]

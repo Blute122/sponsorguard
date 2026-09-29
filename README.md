@@ -193,6 +193,26 @@ pip install -r requirements.txt -r api/requirements.txt
 pytest -q
 ```
 
+## Deploy (Vercel)
+
+The hosted version is one Vercel project serving the UI and the API from a
+single origin:
+
+| File | Role |
+|------|------|
+| `app.py` | Entrypoint. Mounts the API at `/api` and the built UI (`web/dist`) at `/` |
+| `pyproject.toml` | Runtime deps for the deployment (just FastAPI — the engine is stdlib) |
+| `vercel.json` | Builds the UI (`npm ci && npm run build` in `web/`), trims tests/eval from the function bundle, sets security headers |
+
+The production UI calls the relative `/api` path, so no CORS entry is needed.
+The hosted API runs the same **offline** analysis as the local one: RDAP and
+threat-intel enrichment are not exposed, so the demo never makes outbound
+requests on a visitor's behalf.
+
+To deploy: import the repo in the Vercel dashboard (framework preset: FastAPI,
+detected automatically) or run `vercel deploy`. Add a rate-limit rule for
+`/api/analyze` under the project's **Firewall** settings.
+
 ## Evaluating the engine
 
 Detection quality is measured against a labeled corpus rather than asserted:

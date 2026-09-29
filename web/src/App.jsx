@@ -17,7 +17,9 @@ import {
   ShieldCheck,
 } from './icons.jsx'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+// Dev talks to the local uvicorn server; the production build is served from
+// the same origin as the API (see app.py), so it uses the relative /api path.
+const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8000' : '/api')
 
 function groupByCategory(findings) {
   const groups = new Map()
