@@ -23,7 +23,9 @@ export const EXAMPLES = [
 // The labelled eval corpus doubles as a sample inbox for the triage queue.
 // Only file names are shown — the scam/legit folder is not surfaced, so the
 // queue's verdicts come from the engine, not from the label.
-const corpus = import.meta.glob('../../eval/corpus/*/*.eml', {
+// The folders are listed explicitly: a wildcard would also pull the git-ignored
+// eval/corpus/private/ (real, unredacted mail) into the bundle.
+const corpus = import.meta.glob('../../eval/corpus/{scam,legit}/*.eml', {
   query: '?raw',
   import: 'default',
   eager: true,
