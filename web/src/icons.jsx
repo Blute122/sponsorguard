@@ -111,3 +111,49 @@ export function CategoryIcon({ category, size = 20 }) {
   const Cmp = CATEGORY_ICONS[category] || ShieldAlert
   return <Cmp size={size} />
 }
+
+export function ArrowRight({ size = 18 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
+    </svg>
+  )
+}
+
+export function Upload({ size = 22 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M12 15V4" />
+      <path d="M7.5 8.5L12 4l4.5 4.5" />
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+    </svg>
+  )
+}
+
+export function Printer({ size = 17 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M7 9V4h10v5" />
+      <rect x="4" y="9" width="16" height="8" rx="1.5" />
+      <path d="M7 14h10v6H7z" />
+    </svg>
+  )
+}
+
+export function CopyIcon({ size = 17 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <rect x="8" y="8" width="12" height="12" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </svg>
+  )
+}
+
+export function Minus({ size = 16 }) {
+  return (
+    <svg {...base} width={size} height={size}>
+      <path d="M6 12h12" />
+    </svg>
+  )
+}

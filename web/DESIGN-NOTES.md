@@ -1,49 +1,56 @@
 # Design notes
 
-The frontend implements the "reassuring security + creator energy" system:
-bright canvas (`--bg`), deep-emerald identity (green = safe/verified), a lime
-marker accent, and one bold colour-blocked verdict moment.
+The frontend is positioned for **talent agencies and creator-management teams**:
+people who screen inbound sponsorship email on behalf of a roster. The visual
+system is a "case file" — each screened email becomes an exhibit with a verdict,
+a reference number and an evidence ledger.
 
-- **Type:** Bricolage Grotesque (700/800) for headings, Hanken Grotesk for
-  body/UI, JetBrains Mono for the paste box and evidence strings only. Loaded via
-  a Google Fonts `<link>` in `index.html` — no npm dependency added.
+## System
+
+- **Palette:** bone paper (`--paper`), ink (`--ink`), deep bottle-green
+  (`--green`) for brand/verified, and vermilion (`--signal`) reserved strictly
+  for threat evidence. Verdict colours (`--safe`, `--caution`, `--high`,
+  `--danger`) are used only for verdict bands, pills and the case-file header.
+- **Type:** Instrument Serif for display, Geist for UI, Geist Mono for evidence
+  strings, rule IDs and index labels. All three are **self-hosted from npm**
+  (`@fontsource/*`) — the page makes no third-party font request, which fits the
+  "nothing leaves" posture.
 - **Icons:** inline SVG in `src/icons.jsx`, all `currentColor`. No icon library.
-- **Structure:** `src/copy.js` holds verdict framing, the rule-ID → plain-English
-  map, and the clean-result checklist; `src/App.jsx` is the page; `src/styles.css`
-  is the single plain stylesheet.
 
-## Choices made where the spec met the existing code
+## Sections
 
-**Verdict header gradients.** Amber and orange are darkened from the flat tokens
-(`--g-caution-*`, `--g-high-*`) so white body text clears WCAG AA on the lightest
-gradient stop. The flat `--caution` / `--high` tokens are used unchanged wherever
-they appear as text or tint on light backgrounds. Green and coral-red needed no
-adjustment (4.55:1 and 4.76:1 against white).
+1. **Hero** (dark) — centred statement over an annotated rendering of the real
+   `scam_nordvpn.eml` fixture; the specimen bleeds into the next section.
+2. **The threat** (paper) — oversized 200,000+ numeral and an "anatomy" list
+   where every line is tied to the rule ID that catches it.
+3. **Screening desk** — paste box, optional talent/channel label, specimens.
+4. **Case file** — verdict band + score dial, recommended action, evidence
+   ledger (rule ID, quoted evidence, points), message headers, per-category
+   check states, **Export case file** (print stylesheet) and **Copy summary**.
+5. **Triage queue** (dark) — drop up to 50 `.eml` files; each is screened
+   (3 concurrent requests), ranked by risk, and opens into its own case file.
+   "Load sample inbox" uses the eval corpus via `import.meta.glob(..., '?raw')`.
+6. **Method** — gapless bento of the five rule categories with real rule IDs,
+   plus the verdict bands.
+7. **Proof** — numbers read directly from `eval/report.json`, including the
+   harness's own small-sample warning. Nothing is hard-coded.
+8. **Closing CTA + footer.**
 
-**"Why we flagged this" reads `findings`, not `top_reasons`.** `top_reasons` are
-pre-joined `"evidence — explanation"` strings; the design calls for friendly
-plain-English rows, so the top 3 come from `findings` (already sorted by points
-by the scorer) mapped through `FINDING_COPY`.
+## Invariants kept
 
-**Clean-result checklist is derived, not asserted.** The engine emits no positive
-signals, so a tick is shown for each *category that produced no findings*. The
-sender-verification tick is suppressed when `auth_available` is `false`, so the
-UI never claims a check passed that never ran — the skipped-auth note covers that
-case instead.
-
-**Friendlier category labels** in the breakdown ("Who it's from", "What it asks
-for") rather than the engine's internal names. The rule IDs and raw evidence are
-still shown verbatim in each row.
-
-**Unmapped rule IDs** fall back to the raw ID as the title (as specified), with
-the engine's own `explanation` as the description rather than a blank line.
-
-## Unchanged
-
-- Real `POST /analyze` call; example chips still load the actual
-  `tests/fixtures/*.eml` via Vite `?raw`, so UI and tests can't drift.
-- Every email-derived string renders as a React text child.
-  `dangerouslySetInnerHTML` appears nowhere in `web/src` except the comment
-  warning against it.
-- Motion is one reveal on the verdict card plus the scroll-to, both gated behind
+- Real `POST /analyze` call; the API contract is unchanged.
+- Every email-derived string (evidence, headers, subjects, file names) renders
+  as a React text child. `dangerouslySetInnerHTML` appears nowhere in `web/src`.
+- The clean-result checklist is derived, not asserted: a tick only for
+  categories with no findings. Sender authentication is shown as **Skipped**
+  (never passed) when `auth_available` is `false`, and sender identity is
+  **Skipped** when the paste has no From header.
+- The triage drop zone ignores new files while a batch is running, so two
+  batches never race each other.
+- `src/email.js` reads From / Reply-To / Subject for display only — the engine
+  still does all real parsing server-side.
+- Motion is one reveal on the case file plus scroll-to, both respecting
   `prefers-reduced-motion`.
+- The talent/channel label stays in the browser tab; it is never sent to the API.
+
+`design-comps/` holds one rendered image per section, taken from this build.
